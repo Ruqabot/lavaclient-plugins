@@ -1,4 +1,4 @@
-import fetch from "centra";
+import { fetch } from "undici";
 
 import { SpotifyItemType } from "./abstract/SpotifyItem";
 
@@ -131,13 +131,14 @@ export class SpotifyManager {
         if (!this.#token) {
             await this.renew();
         }
+        const f = await fetch(`${prefixBaseUrl ? SpotifyManager.API_URL : ""}${endpoint}`, {
+            headers: {
+                "Authorization": `Bearer ${this.token}`,
+            }
+        });
 
-        return fetch(
-            `${prefixBaseUrl ? SpotifyManager.API_URL : ""}${endpoint}`
-        )
-            .header("Authorization", `Bearer ${this.token}`)
-            .send()
-            .then(r => r.json());
+        const json = await f.json();
+        return json as T;
     }
 
     /**
@@ -183,22 +184,20 @@ export class SpotifyManager {
      * Requests the spotify token and schedules to renew it.
      * @returns {Promise<void>}
      */
-    async renew() {
-        const { expires_in, access_token } = await fetch(
-            "https://accounts.spotify.com/api/token?grant_type=client_credentials",
-            "POST"
-        )
-            .header({
-                authorization: `Basic ${this.encoded}`,
-                "content-type": "application/x-www-form-urlencoded",
-            })
-            .send()
-            .then(r => r.json());
-
+    async renew(): Promise<void> {
+        const {
+            expires_in,
+            access_token,
+        } = await fetch("https://accounts.spotify.com/api/token?grant_type=client_credentials", {
+            method: "POST",
+            headers: {
+                "Authorization": `Basic ${this.encoded}`,
+                "Content-Type": "application/x-www-form-urlencoded",
+            }
+        }).then((r) => r.json()) as { expires_in: number, access_token: string };
         if (!access_token) {
             throw new Error("Invalid spotify client id.");
         }
-
         this.#token = access_token;
         setTimeout(this.renew.bind(this), expires_in * 1000);
     }
