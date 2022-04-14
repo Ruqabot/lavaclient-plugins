@@ -10,5 +10,8 @@
         "@types/node": "^16.6.1",
         "@typescript-eslint/eslint-plugin": "^4.29.2",
         "@typescript-eslint/parser": "^4.29.2",
+    },
+    "dependencies": {
+        "undici": "^5.0.0"
     }
 }
